@@ -1,0 +1,209 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "",
+    "Metadata": {
+
+    },
+    "Parameters": {
+    "ProjectVpcCidr": {
+        "Description": "Choose vpc",
+        "Type": "String",
+        "Default": "10.0.0.0/16"
+    },
+    "ProjectSn1Cidr": {
+        "Description": "Choose Sn1",
+        "Type": "String",
+        "Default": "10.0.100.0/24"
+    },
+    "ProjectSn2Cidr": {
+        "Description": "Choose DemoSn2",
+        "Type": "String",
+        "Default": "10.0.200.0/24"
+    },
+    "ProjectSn1AZ": {
+        "Description": "-",
+        "Type": "AWS::EC2::AvailabilityZone::Name",
+
+    },
+    "ProjectSn2AZ": {
+        "Description": "-",
+        "Type": "AWS::EC2::AvailabilityZone::Name",
+
+    },
+    "Ser1KeyName": {
+        "Description": "-",
+        "Type": "AWS::EC2::KeyPair::KeyName",
+
+    },
+    "Ec2InstacneType": {
+        "Description": "Cheoose the Instance",
+        "Type": "String",
+        "Default": "t2.micro",
+        "AllowedValues": ["t2.micro","t2.nano","t2.small"]
+    },
+    "AMI": {
+        "Description": "Choose AMI",
+        "Type": "String"
+    }
+    },
+    "Mappings": {
+
+    },
+    "Conditions": {
+
+    },
+    "Resources": {
+      "ProjectVpc": {
+        "Type": "AWS::EC2::VPC",
+        "Properties": {
+          "CidrBlock": { "Ref": "ProjectVpcCidr" },
+          "InstanceTenancy": "default",
+          "Tags": [{ "Key": "Name", "Value":  "ProjectVpc" }]
+        }
+      },
+      "ProjectSn1": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": { "Ref": "ProjectSn1AZ" },
+          "VpcId": { "Ref": "ProjectVpc" },
+          "MapPublicIpOnLaunch" : "true",
+          "CidrBlock": { "Ref": "ProjectSn1Cidr" },
+          "Tags": [{ "Key": "Name", "Value":  "ProjectSn1" }]
+        }
+      },
+      "ProjectSn2": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": { "Ref": "ProjectSn2AZ" },
+          "VpcId": { "Ref": "ProjectVpc" },
+          "MapPublicIpOnLaunch" : "true",
+          "CidrBlock": { "Ref": "ProjectSn2Cidr" },
+          "Tags": [{ "Key": "Name", "Value":  "ProjectSn2" }]
+        }
+      },
+      "ProjectIgw": {
+        "Type": "AWS::EC2::InternetGateway",
+        "Properties": {
+          "Tags": [{ "Key": "Name", "Value":  "ProjectIgw" }]
+        }
+      },
+      "AttachGateway": {
+        "Type": "AWS::EC2::VPCGatewayAttachment",
+        "Properties": {
+          "VpcId": { "Ref": "ProjectVpc" },
+          "InternetGatewayId": { "Ref": "ProjectIgw" }
+        }
+      },
+      "ProjectRt": {
+        "Type": "AWS::EC2::RouteTable",
+        "Properties": {
+          "VpcId": { "Ref": "ProjectVpc" },
+          "Tags": [{ "Key": "Name", "Value":  "ProjectRt" }]
+        }
+      },
+      "Projectsn1Rt": {
+        "Type": "AWS::EC2::Route",
+        "Properties": {
+          "RouteTableId": { "Ref": "ProjectRt" },
+          "DestinationCidrBlock": "0.0.0.0/0",
+          "GatewayId": { "Ref": "ProjectIgw" }
+        }
+      },
+      "Projectsn1RtAsso": {
+        "Type": "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties": {
+          "SubnetId": { "Ref": "ProjectSn1" },
+          "RouteTableId": { "Ref": "ProjectRt" }
+        }
+      },
+      "Projectsn2RtAsso": {
+        "Type": "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties": {
+          "SubnetId": { "Ref": "ProjectSn2" },
+          "RouteTableId": { "Ref": "ProjectRt" }
+        }
+      },
+      "ProjectSg" : {
+        "Type" : "AWS::EC2::SecurityGroup",
+        "Properties" : {
+          "GroupDescription" : " SG created for Web",
+          "GroupName" : "String",
+          "SecurityGroupIngress" : [ {
+            "IpProtocol" : "tcp",
+         "FromPort" : 80,
+         "ToPort" : 80,
+         "CidrIp" : "0.0.0.0/0"},
+         {
+          "IpProtocol" : "tcp",
+       "FromPort" : 22,
+       "ToPort" : 22,
+       "CidrIp" : "0.0.0.0/0"}
+          ],
+          "VpcId" : { "Ref": "ProjectVpc" },
+          "Tags" :  [ { "Key": "Name", "Value":  "ProjectSg" }]
+        }
+      },
+      "InstanceOne": {
+          "Type": "AWS::EC2::Instance",
+          "Properties": {
+              "KeyName": { "Ref": "Ser1KeyName" },
+              "SubnetId" : { "Ref": "ProjectSn1" },
+              "ImageId": { "Ref": "AMI" },
+              "InstanceType": { "Ref": "Ec2InstacneType" },
+              "Monitoring": "false",
+              "SecurityGroupIds" : [{ "Ref": "ProjectSg" }],
+              "Tags": [
+                  {
+                      "Key": "Name",
+                      "Value": "InstanceOne"
+                  }
+              ],
+              "UserData": {
+                  "Fn::Base64": {
+                      "Fn::Join": [
+                          "",
+                          [
+                              "#!/bin/bash -ex",
+                              "-"
+                          ]
+                      ]
+                  }
+              }
+      }
+    },
+    "InstanceTwo": {
+        "Type": "AWS::EC2::Instance",
+        "Properties": {
+            "KeyName": { "Ref": "Ser1KeyName" },
+            "SubnetId" : { "Ref": "ProjectSn2" },
+            "ImageId": { "Ref": "AMI" },
+
+            "InstanceType": { "Ref": "Ec2InstacneType" },
+            "Monitoring": "false",
+            "SecurityGroupIds" : [{ "Ref": "ProjectSg" }],
+            "Tags": [
+                {
+                    "Key": "Name",
+                    "Value": "InstanceTwo"
+                }
+            ],
+            "UserData": {
+                "Fn::Base64": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "#!/bin/bash -ex",
+                            "-"
+
+                        ]
+                    ]
+                }
+            }
+    }
+  }
+
+    },
+    "Outputs": {
+
+    }
+}
